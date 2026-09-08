@@ -9,6 +9,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const connectToMongoDb = async function () {
   try {
     await mongoose.connect(MONGODB_URI);
+    console.log("MongoDb connected successfully");
     app.listen(PORT, () => {
       console.log(`Server running on PORT:http://localhost:${PORT}`);
     });
