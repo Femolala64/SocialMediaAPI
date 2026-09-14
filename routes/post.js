@@ -1,12 +1,19 @@
 const express = require("express");
 const protect = require("../middleware/auth");
-const { createPost, publishPost } = require("../controllers/postController");
+const {
+  createPost,
+  publishPost,
+  updatePost,
+  deletePost,
+  getMyPosts,
+} = require("../controllers/postController");
 
 const router = express.Router();
 
-//  POST "/" -> protect, createPost
 router.post("/", protect, createPost);
-//  PATCH "/:id/publish" -> protect, publishPost
+router.get("/me", protect, getMyPosts);
 router.patch("/:id/publish", protect, publishPost);
+router.patch("/:id", protect, updatePost);
+router.delete("/:id", protect, deletePost);
 
 module.exports = router;
