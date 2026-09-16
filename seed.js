@@ -2,15 +2,15 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Post = require("./models/post");
 
-const AUTHOR_ID = "6aa1e140acc7276906d76623";
+const AUTHOR_ID = "6aa6ce878a11f0f798483e29";
 
 const seed = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     const posts = [];
-    for (let i = 1; i <= 25; i++) {
+    for (let i = 1; i <= 15; i++) {
       posts.push({
-        title: `Seed post ${i}`,
+        title: `Seed post B${i}`,
         content: `This is seed post ${i}`,
         tags: i % 3 ? ["node"] : ["react"],
         author: AUTHOR_ID,
