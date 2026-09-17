@@ -258,6 +258,35 @@ const getAllPosts = async (req, res) => {
   }
 };
 
+const getPostById = async (req, res) => {
+  try {
+    const post = await Post.findOne({
+      _id: req.params.id,
+      state: "published",
+    }).populate("author", "first_name last_name username");
+
+    if (!post) {
+      return res.status(404).json({
+        status: false,
+        message: "Post not Found",
+      });
+    }
+    return res.status(200).json({
+      status: true,
+      data: post,
+    });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid Post Id",
+      });
+    }
+    return res.status(500).json({
+      message: "Server Error",
+    });
+  }
+};
 module.exports = {
   createPost,
   publishPost,
@@ -265,4 +294,5 @@ module.exports = {
   deletePost,
   getMyPosts,
   getAllPosts,
+  getPostById,
 };
