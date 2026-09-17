@@ -8,6 +8,12 @@
     "dev": "nodemon app.js",
     "start": "node server.js"
   },
+  "jest": {
+    "setupFilesAfterEnv": [
+      "./tests/setup.js"
+    ],
+    "testEnvironment": "node"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
