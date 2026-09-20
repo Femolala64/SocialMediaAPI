@@ -351,7 +351,6 @@ describe("GET /api/v1/posts/me", () => {
       .get("/api/v1/posts/me")
       .set("Authorization", `Bearer ${token}`);
 
-    console.log(res.statusCode, res.body);
     expect(res.statusCode).toBe(200);
     expect(res.body.posts).toHaveLength(2);
     expect(res.body.totalPost).toBe(2);
@@ -432,5 +431,180 @@ describe("GET /api/v1/posts/me", () => {
 
     expect(res2.statusCode).toBe(200);
     expect(res2.body.posts).toHaveLength(1);
+  });
+});
+
+describe("GET /api/v1/posts", () => {
+  it("returns published posts without a token", async () => {
+    const { token } = await createUserAndToken();
+    const post = await createPost(token);
+    await request(app)
+      .patch(`/api/v1/posts/${post._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    const res = await request(app).get("/api/v1/posts");
+    expect(res.statusCode).toBe(200);
+    expect(res.body.posts).toHaveLength(1);
+  });
+
+  it("excludes drafts", async () => {
+    const { token } = await createUserAndToken();
+    const post1 = await createPost(token, { title: "draft post" });
+    const post2 = await createPost(token, { title: "published post" });
+
+    await request(app)
+      .patch(`/api/v1/posts/${post2._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get("/api/v1/posts");
+    expect(res.body.posts).toHaveLength(1);
+    expect(res.body.posts[0].state).toBe("published");
+  });
+
+  it("returns the author with each post", async () => {
+    const { token } = await createUserAndToken();
+    const post = await createPost(token);
+
+    await request(app)
+      .patch(`/api/v1/posts/${post._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get("/api/v1/posts");
+    expect(res.body.posts[0].author.username).toBeDefined();
+  });
+
+  it("searches by title", async () => {
+    const { token } = await createUserAndToken();
+    const post1 = await createPost(token, { title: "Javascript go far gan" });
+    const post2 = await createPost(token, { title: "Tope alabi is the goat" });
+    await request(app)
+      .patch(`/api/v1/posts/${post1._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    await request(app)
+      .patch(`/api/v1/posts/${post2._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get("/api/v1/posts/?title=tope");
+    expect(res.body.posts).toHaveLength(1);
+  });
+
+  it("searches by tags", async () => {
+    const { token } = await createUserAndToken();
+    const post1 = await createPost(token, {
+      title: "Javascript go far gan",
+      tags: ["node", "backend"],
+    });
+    const post2 = await createPost(token, {
+      title: "Tope alabi is the goat",
+      tags: ["react", "frontend"],
+    });
+    await request(app)
+      .patch(`/api/v1/posts/${post1._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    await request(app)
+      .patch(`/api/v1/posts/${post2._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get("/api/v1/posts/?tags=node");
+    expect(res.body.posts).toHaveLength(1);
+  });
+
+  it("orders by like_count", async () => {
+    const { token } = await createUserAndToken();
+    const post1 = await createPost(token, { title: "Javascript go far gan" });
+    const post2 = await createPost(token, { title: "Tope alabi is the goat" });
+    await request(app)
+      .patch(`/api/v1/posts/${post1._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    await request(app)
+      .patch(`/api/v1/posts/${post2._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    await request(app)
+      .post(`/api/v1/likes/${post2._id}`)
+      .set("Authorization", `Bearer ${token}`);
+    const res = await request(app).get("/api/v1/posts/?orderBy=like_count");
+
+    expect(res.body.posts[0]._id).toBe(post2._id);
+  });
+
+  it("paginates", async () => {
+    const { token } = await createUserAndToken();
+    const post1 = await createPost(token, { title: "Javascript go far gan" });
+    const post2 = await createPost(token, { title: "Tope alabi is the goat" });
+    const post3 = await createPost(token, { title: " alabi is the goat" });
+
+    for (const post of [post1, post2, post3]) {
+      await request(app)
+        .patch(`/api/v1/posts/${post._id}/publish`)
+        .set("Authorization", `Bearer ${token}`);
+    }
+
+    const res = await request(app).get("/api/v1/posts/?limit=2");
+    expect(res.body.posts).toHaveLength(2);
+    expect(res.body.total).toBe(3);
+  });
+  it("searches by author username", async () => {
+    const { token: tokenA } = await createUserAndToken();
+    const postA = await createPost(tokenA, { title: "A's post" });
+    await request(app)
+      .patch(`/api/v1/posts/${postA._id}/publish`)
+      .set("Authorization", `Bearer ${tokenA}`);
+
+    const { token: tokenB } = await createUserAndToken({
+      email: "Testpurpose@gmail.com",
+      username: "kalokaloGbekanmi",
+    });
+    const postB = await createPost(tokenB, { title: "B's post" });
+    await request(app)
+      .patch(`/api/v1/posts/${postB._id}/publish`)
+      .set("Authorization", `Bearer ${tokenB}`);
+
+    const res = await request(app).get("/api/v1/posts/?author=kalo");
+    expect(res.body.posts).toHaveLength(1);
+    expect(res.body.posts[0].author.username).toBe("kalokalogbekanmi");
+  });
+});
+
+describe("GET /api/v1/posts/:id", () => {
+  it("returns a published post without a token", async () => {
+    const { token } = await createUserAndToken();
+    const post = await createPost(token);
+    await request(app)
+      .patch(`/api/v1/posts/${post._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    const res = await request(app).get(`/api/v1/posts/${post._id}`);
+
+    expect(res.body.data._id).toBe(post._id);
+  });
+
+  it("returns 404 for a draft", async () => {
+    const { token } = await createUserAndToken();
+    const post = await createPost(token);
+    const res = await request(app).get(`/api/v1/posts/${post._id}`);
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 404 for a post that does not exist", async () => {
+    const res = await request(app).get(
+      "/api/v1/posts/507f1f77bcf86cd799439011",
+    );
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 400 for a malformed id", async () => {
+    const res = await request(app).get("/api/v1/posts/banana");
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("returns the author with the post", async () => {
+    const { token } = await createUserAndToken();
+    const post = await createPost(token);
+    await request(app)
+      .patch(`/api/v1/posts/${post._id}/publish`)
+      .set("Authorization", `Bearer ${token}`);
+
+    const res = await request(app).get(`/api/v1/posts/${post._id}`);
+    expect(res.body.data.author.username).toBeDefined();
   });
 });
